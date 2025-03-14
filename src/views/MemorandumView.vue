@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import service, { IMemorandum, MemorandumType } from "../api/services";
 import { scrollToBottom } from "../assets/tools";
-import { compressImage, copyToClipboard } from "../assets/tools/common";
+import { copyToClipboard } from "../assets/tools/common";
 import { ElMessage, ElMessageBox, InputInstance } from "element-plus";
 import { requestWrapper } from "@/api/request/index";
 import {
@@ -156,32 +156,21 @@ function openFileUploader() {
 const fileAccept = ref(".pdf,.doc,.docx,.xls,.jpg,.jpeg,.png");
 
 // 单位B
-const MAX_SIZE = 100 * 1024;
+const MAX_SIZE = 1024 * 1024 * 1024;
 
 async function onFileUploaderChange() {
   const fileUploader = fileUploaderRef.value;
   if (fileUploader && fileUploader.files) {
     let file = fileUploader.files[0];
-    const { size, name, type } = file;
+    const { size, name } = file;
     const fileAcceptList = fileAccept.value.split(",");
     if (fileAcceptList.indexOf(name.substring(name.lastIndexOf("."))) === -1) {
       ElMessage.warning("仅支持以下文件类型：" + fileAccept.value);
+      return;
     }
     if (size > MAX_SIZE) {
-      if (type.startsWith("image")) {
-        const messageHandler = ElMessage.info("尝试压缩图片");
-        try {
-          file = await compressImage(file, MAX_SIZE / 1024);
-          ElMessage.success("图片压缩成功");
-        } catch (error) {
-          messageHandler.close();
-          ElMessage.error("图片压缩失败，请选择小于100KB的文件");
-          return;
-        }
-      } else {
-        ElMessage.warning("上传文件大于100KB");
-        return;
-      }
+      ElMessage.warning("上传文件大于1GB");
+      return;
     }
     chooseFile = file;
     popupMessageBox();
@@ -232,9 +221,13 @@ function downloadFile(content: IMemorandum) {
           v-html="getMessageHTML(item.content)"
         ></div>
         <div v-else-if="item.contentType === MemorandumType.FILE">
-          <span class="cursor-pointer text-green-400">
+          <a
+            class="cursor-pointer text-green-400 hover:underline"
+            href="javascript:void(0)"
+            @click="downloadFile(item)"
+          >
             {{ item.file?.originalName }}
-          </span>
+          </a>
         </div>
         <div class="flex-none">
           <el-button
